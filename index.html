@@ -27,12 +27,10 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(3, 1fr);
-      gap: 10px;
-      padding: 20px;
-      width: 90vw;
-      max-width: 1200px;
-      height: 80vh;
-      margin: 0 auto;
+      gap: 5px;
+      padding: 10px;
+      width: 100vw;
+      height: calc(100vh - 60px);
       box-sizing: border-box;
     }
     .slot {
@@ -40,22 +38,20 @@
       border: 2px solid white;
       border-radius: 10px;
       overflow: hidden;
-      background-color: rgba(0,0,0,0.5);
+      background-color: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slot.raised {
+      border: 4px solid yellow;
     }
     .slot iframe, .slot img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      background: black;
       display: block;
-    }
-    .status-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-      z-index: 1;
     }
     .label {
       position: absolute;
@@ -67,6 +63,7 @@
       font-weight: bold;
       padding: 4px 0;
       z-index: 2;
+      font-size: 0.9em;
     }
     .fullscreen-button {
       position: fixed;
@@ -89,7 +86,6 @@
 
   <script>
     const sheetURL = 'https://docs.google.com/spreadsheets/d/1_nKZQWCYFjZemK4HAqgCBL0JXjGmE7kHh7NvcKX61SM/gviz/tq?tqx=out:json';
-    let previousPlayers = [];
 
     async function fetchData() {
       try {
@@ -99,6 +95,7 @@
         const rows = json.table.rows;
 
         const players = [];
+
         for (let i = 0; i < 12; i++) {
           const row = rows[i];
           if (!row) continue;
@@ -106,8 +103,9 @@
             name: row?.c[0]?.v || '',
             role: row?.c[1]?.v || '',
             status: row?.c[2]?.v?.toLowerCase() || '',
-            voted: row?.c[3]?.v?.toLowerCase() === 'да',
-            cam: row?.c[4]?.v || ''
+            voted: row?.c[3]?.v === '*' || row?.c[3]?.v?.toLowerCase() === 'да',
+            cam: row?.c[4]?.v || '',
+            number: row?.c[5]?.v || ''
           });
         }
 
@@ -116,18 +114,16 @@
             name: rows[12]?.c[0]?.v || '',
             role: rows[12]?.c[1]?.v || '',
             status: rows[12]?.c[2]?.v?.toLowerCase() || '',
-            voted: rows[12]?.c[3]?.v?.toLowerCase() === 'да',
-            cam: rows[12]?.c[4]?.v || ''
+            voted: rows[12]?.c[3]?.v === '*' || rows[12]?.c[3]?.v?.toLowerCase() === 'да',
+            cam: rows[12]?.c[4]?.v || '',
+            number: rows[12]?.c[5]?.v || ''
           };
           const index = players.findIndex(p => p.name === host.name);
           if (index !== -1) players.splice(index, 1);
           players.push(host);
         }
 
-        if (JSON.stringify(players) !== JSON.stringify(previousPlayers)) {
-          renderGrid(players);
-          previousPlayers = players;
-        }
+        renderGrid(players);
       } catch (e) {
         console.error('Ошибка загрузки таблицы:', e);
       }
@@ -137,20 +133,17 @@
       const grid = document.getElementById('grid');
       grid.innerHTML = '';
 
-      players.forEach(p => {
+      players.forEach((p) => {
         const div = document.createElement('div');
         div.className = 'slot';
+        if (p.voted) div.classList.add('raised');
 
         if (p.status === 'убит') {
           div.innerHTML = `<img src="https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/refs/heads/main/assets/killed.jpg" alt="killed" />`;
         } else if (p.status === 'выгнан') {
           div.innerHTML = `<img src="https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/refs/heads/main/assets/voted-out.jpg" alt="voted out" />`;
         } else if (p.cam) {
-          const iframe = document.createElement('iframe');
-          iframe.src = p.cam;
-          iframe.setAttribute('allow', 'camera; microphone');
-          iframe.setAttribute('frameborder', '0');
-          div.appendChild(iframe);
+          div.innerHTML = `<iframe src="${p.cam}" allow="camera; microphone" frameborder="0"></iframe>`;
         } else {
           div.innerHTML = `<img src="https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/refs/heads/main/assets/empty.jpg" alt="empty" />`;
         }
@@ -158,7 +151,7 @@
         if (p.name) {
           const label = document.createElement('div');
           label.className = 'label';
-          label.textContent = p.name;
+          label.textContent = `${p.number}) ${p.name}`;
           div.appendChild(label);
         }
 
