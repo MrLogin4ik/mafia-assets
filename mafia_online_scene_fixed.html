@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mafia Online</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: url('https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      text-align: center;
+      font-size: 48px;
+      margin: 20px 0;
+      color: #e84bc2;
+      font-family: 'Hippopotamus Apocalypse', cursive;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-gap: 10px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .player {
+      position: relative;
+      border: 3px solid white;
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+    .player iframe, .player img.camera {
+      width: 100%;
+      height: 200px;
+      display: block;
+    }
+    .player .label {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-weight: bold;
+      padding: 5px;
+      font-size: 16px;
+    }
+    .status-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <h1>MAFIA ONLINE</h1>
+  <div class="grid" id="playersGrid"></div>
+
+  <script>
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2xaTirOrGTp4OEN-48TPcESBQ3EoGtxs0cB_F-7AHt_7Jmwvw-llNw_39F8Tj5zP09Qb086EMnjs3/pub?gid=0&single=true&output=csv";
+
+    const STATUS_IMAGES = {
+      'убит': 'https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/killed.jpg',
+      'выгнан': 'https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/voted-out.jpg'
+    };
+
+    const EMPTY_IMAGE = 'https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/empty.jpg';
+
+    async function loadPlayers() {
+      const res = await fetch(sheetURL);
+      const csv = await res.text();
+      const lines = csv.trim().split("\n").slice(1); // skip headers
+      const players = lines.map(row => {
+        const [name, num, status, voted, cam] = row.split(",");
+        return { name, status: status?.trim().toLowerCase(), voted: voted?.trim(), cam: cam?.trim() };
+      });
+
+      const grid = document.getElementById("playersGrid");
+      grid.innerHTML = "";
+
+      // 12 игроков: 11 + ведущий (последний)
+      const fixedPlayers = players.slice(0, 11);
+      const host = players[11];
+
+      [...fixedPlayers, host].forEach(player => {
+        const div = document.createElement("div");
+        div.className = "player";
+
+        // статус — убит / выгнан
+        if (player.status === "убит" || player.status === "выгнан") {
+          const img = document.createElement("img");
+          img.className = "status-overlay";
+          img.src = STATUS_IMAGES[player.status] || "";
+          div.appendChild(img);
+        } else if (player.cam) {
+          const iframe = document.createElement("iframe");
+          iframe.src = player.cam;
+          iframe.allow = "camera *; microphone *; display-capture *;";
+          iframe.allowFullscreen = true;
+          iframe.frameBorder = 0;
+          div.appendChild(iframe);
+        } else {
+          const img = document.createElement("img");
+          img.src = EMPTY_IMAGE;
+          img.className = "camera";
+          div.appendChild(img);
+        }
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = player.name;
+        div.appendChild(label);
+
+        grid.appendChild(div);
+      });
+    }
+
+    loadPlayers();
+  </script>
+</body>
+</html>
