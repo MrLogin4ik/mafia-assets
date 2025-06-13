@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mafia Online</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: url('https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/background.jpg') center/cover fixed no-repeat;
+      color: white;
+      text-align: center;
+    }
+    h1 {
+      font-family: 'Hippopotamus Apocalypse', sans-serif;
+      font-size: 4vw;
+      margin: 20px 0;
+      background: linear-gradient(to right, #cfd8ff, #6574ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px;
+      width: 100vw;
+      height: calc(100vh - 100px);
+      box-sizing: border-box;
+    }
+    .cell {
+      position: relative;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.4);
+    }
+    iframe, .placeholder {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    .highlight {
+      outline: 4px solid yellow;
+      outline-offset: -4px;
+      z-index: 2;
+    }
+    .label-top, .label-bottom {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      background: rgba(0,0,0,0.6);
+      z-index: 3;
+      color: white;
+    }
+    .label-top {
+      top: 5px;
+      font-size: 1.2vw;
+    }
+    .label-bottom {
+      bottom: 5px;
+      font-size: 1.5vw;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>MAFIA ONLINE</h1>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const SHEET_ID = '1_nKZQWCYFjZemK4HAqgCBL0JXjGmE7kHh7NvcKX61SM';
+    const SHEET_NAME = 'Sheet1'; // <— заменяй на своё название листа, если отличается
+    const SHEET_URL = 
+      'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+      '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME);
+
+    const IMG = 'https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/';
+
+    async function fetchData() {
+      const res = await fetch(SHEET_URL);
+      const text = await res.text();
+      const json = JSON.parse(text.substring(47).slice(0, -2));
+      const rows = json.table.rows;
+      renderGrid(rows);
+    }
+
+    function renderGrid(rows) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 12; i++) {
+        const row = rows[i + 1]; // +1 чтобы пропустить заголовки
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        let name = '', num = '', status = '', starred = false, cam = '';
+
+        if (row && row.c) {
+          name = row.c[0]?.v || '';
+          num = row.c[1]?.v || '';
+          status = (row.c[2]?.v || '').toString().toLowerCase();
+          starred = row.c[3]?.v
