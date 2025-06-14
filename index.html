@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mafia Online</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Corki+One&display=swap">
+  <style>
+    @font-face {
+      font-family: 'Hippopotamus Apocalypse';
+      src: url('Hippopotamus Apocalypse.otf') format('opentype');
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: url('https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Corki One', sans-serif;
+      color: white;
+    }
+
+    .header {
+      text-align: center;
+      font-family: 'Hippopotamus Apocalypse', sans-serif;
+      font-size: 48px;
+      background: linear-gradient(to bottom, white, #aaa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-top: 20px;
+    }
+
+    .fullscreen-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 30px;
+      color: white;
+      user-select: none;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 10px;
+      padding: 20px;
+      max-width: 1600px;
+      margin: auto;
+    }
+
+    .player {
+      position: relative;
+      aspect-ratio: 16/9;
+      background-color: black;
+      overflow: hidden;
+      border: 4px solid transparent;
+      border-radius: 8px;
+    }
+
+    .player.voted {
+      border-color: yellow;
+    }
+
+    .player img,
+    .player iframe {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border: none;
+    }
+
+    .overlay {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      text-align: center;
+      font-size: 18px;
+      line-height: 1.2;
+      pointer-events: none;
+    }
+
+    .overlay .number {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="fullscreen-toggle" onclick="toggleFullscreen()">⛶</div>
+  <div class="header">MAFIA ONLINE</div>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const API_KEY = 'AIzaSyDvwTNSPQPn1nlHvn4GVllcWZm_dq6QCXQ';
+    const SHEET_ID = '1_nKZQWCYFjZemK4HAqgCBL0JXjGmE7kHh7NvcKX61SM';
+    const RANGE = 'Мафия Онлайн!B2:F14';
+    let lastCameras = Array(12).fill(null);
+    let initialized = false;
+
+    async function fetchData() {
+      try {
+        const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`);
+        const data = await res.json();
+        const rows = data.values || [];
+        updateGrid(rows);
+      } catch (err) {
+        console.error('Ошибка загрузки данных:', err);
+      }
+    }
+
+    function updateGrid(rows) {
+      const grid = document.getElementById('grid');
+
+      for (let i = 0; i < 12; i++) {
+        const row = rows[i] || [];
+        const name = row[0] || '';
+        const number = row[1] || '';
+        const status = (row[2] || '').toLowerCase();
+        const vote = row[3] || '';
+        const cam = row[4] || '';
+
+        let container = document.getElementById(`player-${i}`);
+
+        if (!container) {
+          container = document.createElement('div');
+          container.className = 'player';
+          container.id = `player-${i}`;
+          grid.appendChild(container);
+        }
+
+        container.classList.toggle('voted', vote.trim() === '-');
+
+        // Камера обновляется только если статус или ссылка изменилась
+        const currentStatus = container.getAttribute('data-status');
+        const currentCam = container.getAttribute('data-cam');
+
+        if (status !== currentStatus || cam !== currentCam) {
+          container.setAttribute('data-status', status);
+          container.setAttribute('data-cam', cam);
+
+          if (status === 'выгнан') {
+            container.innerHTML = `<img src="https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/voted-out.jpg">`;
+          } else if (status === 'убит') {
+            container.innerHTML = `<img src="https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/killed.jpg">`;
+          } else if (cam) {
+            container.innerHTML = `<iframe src="${cam}" allow="autoplay; camera; microphone; fullscreen" allowfullscreen></iframe>`;
+          } else {
+            container.innerHTML = `<img src="https://raw.githubusercontent.com/MrLogin4ik/mafia-assets/main/assets/empty.jpg">`;
+          }
+        }
+
+        // overlay всегда обновляем
+        const oldOverlay = container.querySelector('.overlay');
+        if (oldOverlay) oldOverlay.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.innerHTML = `<div class="number">${number}</div><div>${name}</div>`;
+        container.appendChild(overlay);
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    fetchData();
+    setInterval(fetchData, 2000);
+  </script>
+</body>
+</html>
