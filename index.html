@@ -173,5 +173,113 @@
     fetchData();
     setInterval(fetchData, 2000);
   </script>
+  <!-- КНОПКА И МЕНЮ ДЛЯ ВЕДУЩЕГО -->
+<div id="menuButton" style="position: absolute; top: 10px; right: 60px; cursor: pointer; font-size: 20px; color: white; user-select: none; z-index: 9999;">
+  📋 МЕНЮ
+</div>
+
+<div id="hostMenu" style="display: none; position: absolute; top: 50px; right: 20px; background: rgba(0,0,0,0.85); padding: 12px; border-radius: 8px; color: white; z-index: 9999;">
+  <label>Игрок:
+    <select id="playerSelect">
+      <option value="0">Игрок 1</option>
+      <option value="1">Игрок 2</option>
+      <option value="2">Игрок 3</option>
+      <option value="3">Игрок 4</option>
+      <option value="4">Игрок 5</option>
+      <option value="5">Игрок 6</option>
+      <option value="6">Игрок 7</option>
+      <option value="7">Игрок 8</option>
+      <option value="8">Игрок 9</option>
+      <option value="9">Игрок 10</option>
+      <option value="10">Игрок 11</option>
+    </select>
+  </label><br><br>
+  <label>Действие:
+    <select id="actionSelect">
+      <option value="-">Выставить на голосование</option>
+      <option value="убит">Убить игрока</option>
+      <option value="выгнан">Выгнать игрока</option>
+    </select>
+  </label><br><br>
+  <button onclick="applyAction()">Применить</button>
+</div>
+
+<script>
+  const CLIENT_ID = '497618593889-eqqgihnda1t47eo4jbh5h0u33p20o98s.apps.googleusercontent.com';
+  const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+  let tokenClient, gapiInited = false, gisInited = false;
+
+  function gapiLoaded() {
+    gapi.load('client', initializeGapiClient);
+  }
+
+  async function initializeGapiClient() {
+    await gapi.client.init({
+      apiKey: API_KEY,
+      discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+    });
+    gapiInited = true;
+  }
+
+  function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: '',
+    });
+    gisInited = true;
+  }
+
+  function applyAction() {
+    const playerIndex = parseInt(document.getElementById('playerSelect').value);
+    const action = document.getElementById('actionSelect').value;
+
+    if (!gapiInited || !gisInited) return alert('Авторизация не выполнена');
+
+    tokenClient.callback = async (resp) => {
+      if (resp.error) throw resp;
+
+      const range = action === '-' ? `Мафия Онлайн!E${playerIndex + 2}` : `Мафия Онлайн!D${playerIndex + 2}`;
+
+      try {
+        const res = await gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range
+        });
+        const current = res.result.values ? res.result.values[0][0] : '';
+        const newValue = current === action ? '' : action;
+
+        await gapi.client.sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range,
+          valueInputOption: 'USER_ENTERED',
+          resource: { values: [[newValue]] }
+        });
+
+        alert('Обновлено: ' + (newValue || 'очищено'));
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
+      }
+    };
+
+    tokenClient.requestAccessToken();
+  }
+
+  // Показ / скрытие меню
+  document.getElementById('menuButton').onclick = () => {
+    const menu = document.getElementById('hostMenu');
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  };
+
+  document.body.addEventListener('click', (e) => {
+    if (!e.target.closest('#hostMenu') && e.target.id !== 'menuButton') {
+      document.getElementById('hostMenu').style.display = 'none';
+    }
+  });
+</script>
+
+<script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+  
 </body>
 </html>
