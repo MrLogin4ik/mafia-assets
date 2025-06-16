@@ -279,7 +279,15 @@
       initGSI();
       fetchData();
       setInterval(fetchData, 2000);
-    }
+    };
+
+    window.toggleFullscreen = function () {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+};
   </script>
 </body>
 </html>
