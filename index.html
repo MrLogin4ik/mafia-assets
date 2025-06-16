@@ -174,7 +174,7 @@
     setInterval(fetchData, 2000);
   </script>
   <!-- КНОПКА И МЕНЮ ДЛЯ ВЕДУЩЕГО -->
-<div id="menuButton" style="position: absolute; top: 10px; right: 60px; cursor: pointer; font-size: 20px; color: white; user-select: none; z-index: 9999;">
+<div id="menuButton" style="display: none; position: absolute; top: 10px; right: 60px; cursor: pointer; font-size: 20px; color: white; user-select: none; z-index: 9999;">
   📋 МЕНЮ
 </div>
 
@@ -218,6 +218,7 @@
       apiKey: API_KEY,
       discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
     });
+    await gapi.client.load('oauth2', 'v2');
     gapiInited = true;
   }
 
@@ -231,39 +232,57 @@
   }
 
   function applyAction() {
-    const playerIndex = parseInt(document.getElementById('playerSelect').value);
-    const action = document.getElementById('actionSelect').value;
+    let pendingCallback = null;
 
-    if (!gapiInited || !gisInited) return alert('Авторизация не выполнена');
+function applyAction() {
+  const playerIndex = parseInt(document.getElementById('playerSelect').value);
+  const action = document.getElementById('actionSelect').value;
 
-    tokenClient.callback = async (resp) => {
-      if (resp.error) throw resp;
+  pendingCallback = async () => {
+    const userInfo = await gapi.client.oauth2.userinfo.get();
+    const userEmail = userInfo.result.email;
 
-      const range = action === '-' ? `Мафия Онлайн!E${playerIndex + 2}` : `Мафия Онлайн!D${playerIndex + 2}`;
+    if (userEmail !== 'bnemno@gmail.com') return;
 
-      try {
-        const res = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range
-        });
-        const current = res.result.values ? res.result.values[0][0] : '';
-        const newValue = current === action ? '' : action;
+    document.getElementById('menuButton').style.display = 'block';
 
-        await gapi.client.sheets.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range,
-          valueInputOption: 'USER_ENTERED',
-          resource: { values: [[newValue]] }
-        });
+    const range = action === '-' ? `Мафия Онлайн!E${playerIndex + 2}` : `Мафия Онлайн!D${playerIndex + 2}`;
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range
+    });
+    const current = res.result.values ? res.result.values[0][0] : '';
+    const newValue = current === action ? '' : action;
 
-        alert('Обновлено: ' + (newValue || 'очищено'));
-      } catch (err) {
-        alert('Ошибка: ' + err.message);
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [[newValue]] }
+    });
+
+    alert('Обновлено: ' + (newValue || 'очищено'));
+  };
+
+  ensureAccessToken(pendingCallback);
+}
+    function ensureAccessToken(callback) {
+  const token = gapi.client.getToken();
+
+  if (!token) {
+    tokenClient.callback = (resp) => {
+      if (resp && resp.error) {
+        alert("Ошибка авторизации");
+        console.error(resp);
+      } else {
+        if (callback) callback();
       }
     };
-
-    tokenClient.requestAccessToken();
+    tokenClient.requestAccessToken({ prompt: 'none' });
+  } else {
+    callback();
   }
+}
 
   // Показ / скрытие меню
   document.getElementById('menuButton').onclick = () => {
